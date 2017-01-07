@@ -1,0 +1,85 @@
+---
+title: 'Part 1: Simulation Exercise'
+author: "Ivan Gimenez"
+date: "January 7, 2017"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Assignment Scope
+
+In this assignment the exponential distribution and averages will be investigated in R and compared it with the Central Limit Theorem. The exponential distribution will be simulated in R with rexp(n, lambda) where lambda is the rate parameter. The mean of exponential distribution is 1/lambda and the standard deviation is also 1/lambda. The distribution of averages of n exponentials will be numerically investigated with thousand simulations.
+
+In this assignment, we set
+```{r globals,results='hide'}
+set.seed(42)
+lambda=0.2
+m=40
+n=10000
+```
+where we use lambda = `r lambda` for all of the simulations, assume m = `r m` averages of exponentials, and each simulation is repeated n = `r as.integer(n)` times
+
+## `r m`-averaged Exponential Distribution
+
+Lets first plot an approximation of the distribution of `r n` averages of `r m` random exponentials. The Central Limit Theorem (CLT) states that given a distribution with a mean $\mu$ and variance $\sigma^2$, the sampling distribution of the mean approaches a normal distribution with a mean ($\mu$) and a variance $\sigma^2/n$ as $n$ increases. 
+
+```{r avg_exp_dist,results='hide'}
+avg_exps <- replicate(n, mean(rexp(m, lambda)))
+hist(avg_exps, breaks=m, col='red', xlab='value', 
+     main="Averaged Exponentials distribution", freq=FALSE)
+```
+
+## Sample Mean versus Theoretical Mean
+This section compares the mean of the sampling distribution of the sample mean versus the theoretical mean of the exponential distribution, known to be (1/lambda). We will show that, as stated in the CLT, the averaging of exponentials will give us a good estimator of the mean.
+
+```{r mean_avg_exp }
+simulated.mean <- mean(avg_exps)
+expected.mean <- 1/lambda
+```
+
+| Sampled | Expected |
+| ------------- | ------------- |
+| `r simulated.mean` | `r expected.mean` |
+
+which seems to agree with the CLT, that states that given a distribution with a mean $\mu$ and variance $\sigma^2$, the sampling distribution of the mean approaches a normal distribution with a mean ($\mu$).
+
+## Sample Variance versus Theoretical Variance
+This section compares the variance of the sampling distribution of the sample mean versus the theoretical variance of the exponential distribution, known to be (1/lambda)^2/m
+```{r sd_avg_exp }
+simulated.var <- var(avg_exps)
+expected.var <- (1/lambda)^2/m
+```
+| Sampled | Expected |
+| ------------- | ------------- |
+| `r simulated.var` | `r expected.var` |
+
+which seems to agree with the CLT, that states that given a distribution with a mean $\mu$ and variance $\sigma^2$, the sampling distribution of the mean approaches a normal distribution with variance $\sigma^2/n$ as n increases. 
+
+## Distribution
+This section will show that the averaged exponentials distribution is approximately normal.
+
+First we will show graphically that the sample distribution closely resembles a Normal distribution, centered at `r expected.mean` with an standard deviation of `r sqrt(expected.var)`
+```{r test_dist_normal_pdf }
+rx <- range(avg_exps)
+x <- seq(rx[1], rx[2], length=m)
+y <- dnorm(x, mean=expected.mean, sd=sqrt(expected.var))
+hist(avg_exps,breaks=m,freq=FALSE,col="grey",xlab="value",
+     main="Averaged Exponentials distribution vs Normal")
+lines(x, y, pch=22, col="black", lty=5, lwd=2)
+# plots the expected mean in a solid black line
+abline(v = expected.mean, col = "black", lwd=2)
+# plots the populaton mean in a dashed red line
+abline(v = simulated.mean, col = "red", lty=2,lwd=2)
+```
+
+Moreover, we can plot a quantile-to-quantile comparision plot, also known as Q-Q plot, in order to compare the quantiles between the averaged exponential sample distribution and the normal distribuition
+```{r test_dist_normal_qqplot }
+qqnorm(avg_exps, main="Normal Q-Q Plot", xlab="Theoretical Quantiles", 
+       ylab="Sample Quantiles", col="grey")
+qqline(avg_exps, col="black")
+```
+
+It can be seen that all sample distribution quantiles lie close to the line representing the quantiles of the Normal distribution, as stated by the theory.

@@ -1,0 +1,133 @@
+---
+title: 'Part 2: Basic Inferential Data Analysis'
+author: "Ivan Gimenez"
+date: "January 7, 2017"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Assignment Scope
+Mean tooth length of Guinea Pigs is a raising cause of concern because its complex socioeconomic and political implications. The effect of the C Vitamin on Guinea Pigs odontoblasts is becoming a much debated subject among scientific community. Nevertheless, brave new studies are bringing light to this worrisome problem.  In this second part of the assignment project, we're going to analyze the ToothGrowth data in the R datasets package.
+
+## Dataset load
+In order to load the ToothGrowth dataset, the 'datasets' library along with ggplot2 must be loaded, and then after, load the ToothGrowth dataset from the 'datasets' library, with the following commands
+
+```{r dataLoad }
+library(ggplot2)
+library(datasets)
+data(ToothGrowth)
+```
+
+As stated by the 'datasets' library ToothGrowth help documentation, the dataset documents the effect of vitamin C on tooth growth in guinea pigs, in particular the response is the length of odontoblasts (cells responsible for tooth growth) in 60 guinea pigs. Each animal received one of three dose levels of vitamin C (0.5, 1, and 2 mg/day) by one of two delivery methods, orange juice (coded as OJ) or ascorbic acid, a form of vitamin C (coded as VC).
+
+## Initial Summary of the Data
+To provide an initial overview of the dataset, let's take a peek into the dataset with str()
+```{r str_info }
+str(ToothGrowth)
+```
+
+The dataset consists in a data frame of 60 observations on 3 variables. 
+
+| Variable  | Type | Description |
+| ------------- | ------------- | ------------- |
+| **_len_**	| numeric | _Tooth length_ |
+| **_supp_** | factor | _Supplement type: VC='Vitamin C' or OJ='Oranje Juice'_ |
+| **_dose_** | numeric | _Dose in mg/day_ (converted to factor) |
+
+Let's display a statistical summary
+```{r summary_info }
+# Display a summary of the data
+summary(ToothGrowth)
+unique(ToothGrowth$supp)
+unique(ToothGrowth$dose)
+```
+
+Let's check how observations are distributed depending on dose and supplement delivery method,
+```{r table_info }
+ToothGrowth$dose<-as.factor(ToothGrowth$dose)
+table(ToothGrowth$supp, ToothGrowth$dose)
+```
+
+so therefore, it looks an even sampling: two sets of 30 guinea pigs per supplement delivery method, and groups of 10 randomly chosen guinea pigs within the set receive diferent dosages (0.5, 1 and 2 mg) of C-Vitamin. 
+
+## Exploratory Analysis
+To provide an initial overview of the properties of the dataset, we will plot how the dose and supplement delivery method of the C vitamin affects the tooth length.
+
+**First**, we will explore how the tooth length depends on the C Vitamin dose, per each supplement delivery method.  
+```{r boxplot_len_dose_by_supp }
+# Plot tooth length vs dose, by supplement delivery method
+ggplot(aes(x=dose, y=len), data=ToothGrowth) + 
+                    geom_boxplot(aes(fill=dose)) + 
+                    xlab("Dose (mg/day)") + 
+                    ylab("Length") + 
+                    facet_grid(~ supp) + 
+                    ggtitle("Tooth Length vs Dose by Delivery Method") +
+                    theme(legend.position='none')
+```
+
+Apparently, it looks like there is a positive correlation between the mean tooth lenght and the dose of C vitamin, regardless the supplement delivery method.
+
+```{r someMomentsByMethod }
+OJ<-subset(ToothGrowth, supp=="OJ")
+VC<-subset(ToothGrowth, supp=="VC")
+```
+
+| Method | Mean (.5,1,2 mg/day) | Variance (.5,1,2 mg/day) |
+| ------------- | ------------- | ------------- |
+| Oranje Juice(OJ) | `r tapply(OJ$len, OJ$dose, mean)` | `r tapply(OJ$len, OJ$dose, var)` |
+| Ascorbic Acid(VC) | `r tapply(VC$len, VC$dose, mean)` | `r tapply(VC$len, VC$dose, var)` |
+
+**Second**, we will explore how the tooth length depends on the supplement delivery method, per each C Vitamin dosage.
+```{r boxplot_len_meth_by_dose }
+# Plot tooth length vs supplement delivery method, by dose
+ggplot(aes(x=supp, y=len), data=ToothGrowth) + 
+                    geom_boxplot(aes(fill=supp)) + 
+                    xlab("Supplement Delivery Method") + 
+                    ylab("Length") + 
+                    facet_grid(~ dose) + 
+                    ggtitle("Tooth Length vs Delivery Method by Dose (mg/day)") +
+                    theme(legend.position='none')
+```
+
+From the figure, it looks like at low C Vitamin dosages (.5 and 1 mg/day), the Oranje juice supplement delivery method looks more effective than Ascorbic Acid in terms of attained tooth length. 
+
+```{r someMomentsByDose }
+dose05<-subset(ToothGrowth, dose==.5)
+dose10<-subset(ToothGrowth, dose==1)
+dose20<-subset(ToothGrowth, dose==2)
+```
+
+| Dose | Mean (OJ,VC) | Variance (OJ,VC) |
+| ------------- | ------------- | ------------- |
+| 0.5 mg/day | `r tapply(dose05$len, dose05$supp, mean)` | `r tapply(dose05$len, dose05$supp, var)` |
+| 1.0 mg/day | `r tapply(dose10$len, dose10$supp, mean)` | `r tapply(dose10$len, dose10$supp, var)` |
+| 2.0 mg/day | `r tapply(dose20$len, dose20$supp, mean)` | `r tapply(dose20$len, dose20$supp, var)` |
+
+## Inference Analysis
+**First**, let's analyse the alternative hypothesis that the tooth length of the Guinea Pigs depends on supplement delivery methods. The null hypothesis is that different supplement types have no effect on tooth length. We will be under the assumption of unequal variance as these two groups are not paired.
+
+A t test for the difference will test this hypothesis:
+```{r testSupplementDeliveryEffect }
+t.test(VC$len,OJ$len, paired=FALSE, var.equal=FALSE)
+```
+The p-value of this test was 0.06, which is close but greater to the significance level of 5%. Furthermore, the confidence interval of the test contains zero (0). This indicates that **_we can not reject the null hypothesis that the different supplement types have no effect on tooth length_**.
+
+**Second**, let's test the alternative hypothesis that the tooth length of the Guinea Pigs increases as C Vitamin dosage grows. The null hypothesis is that increasing C Vitamin dosages have no effect on tooth length.
+
+A t test for the difference between all dosage pairs will test this hypothesis:
+```{r testDosageEffect }
+t.test(dose05$len, dose10$len, paired=FALSE, var.equal=FALSE)
+t.test(dose05$len, dose20$len, paired=FALSE, var.equal=FALSE)
+t.test(dose10$len, dose20$len, paired=FALSE, var.equal=FALSE)
+```
+
+We can confirm on all 3 tests that p-value was much smaller than significant level of 5%. Moreover, the confidence intervals were all below zero. This indicates that **_we can reject the null hypothesis that increasing C Vitamin dosages have no effect on tooth length_**
+
+## Conclusions
+* Supplement Delivery Method has no effect on the tooth length.
+* Increasing levels of C Vitamin dosages leads to longer Guinea Pig tooth lengths, which is great.
+
+
